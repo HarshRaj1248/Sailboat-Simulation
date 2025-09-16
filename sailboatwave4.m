@@ -1,0 +1,114 @@
+clear;
+clc;
+close all;
+% Parameters
+m = 500; % mass of the boat in kg
+rho_a = 1.225; % air density in kg/m^3
+rho_w = 1000; % water density in kg/m^3
+A_Sail = 20; % sail area in m/s^2
+A_hull = 10; % hull area in m/s^2
+Cd_a = 1.2; % drag coefficient for air (taken same for all three axes)
+Cd_w = 0.8; % drag coefficient for water
+Cd_z = 0.1; % drag coefficient for water in z-direction (vertical motion)
+C_L = 1.0; % lift coefficient for air
+g = 9.81; % gravitational acceleration in m/s^2
+
+%  Spring constant for buoyancy force
+k_b = 5000; % (N/m) k= F_b/ z = A* rho_w * g
+
+% wave parameters
+A_w = 0.5; % amplitude of the wave in m
+lambda = 20; % wavelength in m
+omega_w = 0.5; % angular frequency of the wave in rad/s
+
+% wind parameters
+speed_w = 10; % wind speed in m/s
+angle_w = pi/4; % wind direction in radians
+
+% initialization
+x0 = 0; % x position in m
+y0 = 0; % y position in m
+z0 = -0.981; % z position in m by equating force of bouyancy
+vx0 = 1; %  velocity in x direction in m/s
+vy0 = 1; % initial velocity in y direction in m/s
+vz0 = 0; % initial velocity in z direction in m/s
+
+% Time vector
+tspan = linspace(0, 100, 500); % time range for the simulation in s
+
+% Initialization of position and velocity 
+initial = [x0; y0; z0; vx0; vy0; vz0];
+
+% Solve the differential equations
+[t, X] = ode45(@(t, x) boat(t, x, m, speed_w, angle_w, A_Sail, rho_a, ...
+    Cd_a, C_L, A_hull, rho_w, Cd_w, k_b, Cd_z, g, A_w, ...
+    lambda, omega_w), tspan, initial);
+
+% Extract position data
+x = X(:, 1);
+y = X(:, 2);
+z = X(:, 3);
+
+% Plot the boat's 3D trajectory
+  
+figure;
+plot3(x, y, z, 'ro-', 'MarkerSize', 2, 'MarkerFaceColor', 'r', ...
+    'LineWidth', 1.5);
+
+hold on;
+% wave lines in parallel to the boat's path
+wave_d = 5; % distance between wave lines
+x_wave = linspace(min(x), max(x), 500); % x-values for the wave lines
+
+% generate waves along the direction of wind
+
+for i = [-2; -1; 1;2]
+    % Shift waves in y-direction but keep aligned with wind angle
+    y_off = i * wave_d; %offset of y value
+    % Define position of waves along wind direction
+    x_align = x_wave * cos(angle_w) + y_off * sin(angle_w); % x value
+    y_align = x_wave * sin(angle_w) - y_off * cos(angle_w); % y value
+    
+    % z-values for the waves
+    z_wave = height_w(x, y, t, A_w, lambda, omega_w, angle_w);
+    plot3(x_align, y_align, z_wave, 'b', 'LineWidth', 1);
+end
+% calculate limits of axis based on boat trajectory and wave height
+xmin = min(x) - 5;
+xmax = max(x) + 5;
+ymin = min(y) - 5;
+ymax = max(y) + 5;
+zmin = min(z) - 3; % assuming small oscillations near z=0
+zmax = max(z) + 3;
+
+% axis limits for better visualing
+axis([xmin xmax ymin ymax zmin zmax]);
+
+% Final plot
+xlabel('X Position (m)');
+ylabel('Y Position (m)');
+zlabel('Z Position (m)');
+title('Sailing Boat 3D Trajectory with waves');
+lgd = legend('Simulation of sailboat','Waves');
+lgd.Interpreter = "latex";
+lgd.Location = "best";
+lgd.FontSize= 14;
+grid on;
+ax= gca;
+ax.FontSize =14;
+ax.LineWidth =1.05;
+%Setting the plot settings
+fig = gcf;
+fig.PaperPositionMode ="auto";
+fig.PaperOrientation ="landscape";
+fig.PaperSize = [fig.PaperPosition(3) fig.PaperPosition(4)];
+print(fig,'Output','-dpdf');
+hold off;
+
+
+
+
+
+
+
+
